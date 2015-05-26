@@ -1,6 +1,4 @@
 ios-flickr-feed
 ===============
 
-A simple photo grid view application.  Tap photos to enlarge.
-
-Tested on iOS 5 to iOS 6.1.
+A simple photo grid view application for searching and viewing photos from Flickr.  Tap photos to enlarge.

@@ -36,6 +36,7 @@
 const CGFloat kSearchBarHeight = 44.0f;
 const NSInteger kImageViewTag = 9314;
 const NSInteger kTitleLabelTag = 4313;
+const CGFloat kTitleLabelVPadding = 8.0f;
 
 - (void)viewDidLoad
 {
@@ -131,7 +132,7 @@ const NSInteger kTitleLabelTag = 4313;
     
     [[FlickrAPIClient sharedClient] publicFeedWithTags:tags completionBlock:^(NSDictionary *response, NSError *error)
      {
-         if (error == nil) {
+         if (error == nil) {			 
              NSMutableArray *mutableItems = [NSMutableArray array];
              for (NSDictionary *itemDict in [response objectForKey:@"items"]) {
                  FlickrItem *item = [[FlickrItem alloc] init];
@@ -139,9 +140,22 @@ const NSInteger kTitleLabelTag = 4313;
                  NSString *photoURLString = [[itemDict objectForKey:@"media"] objectForKey:@"m"];
                  item.thumbnailURL = [NSURL URLWithString:photoURLString];
                  item.largeURL = [NSURL URLWithString:[photoURLString stringByReplacingOccurrencesOfString:@"_m.jpg" withString:@".jpg"]];
-                 item.author = [itemDict objectForKey:@"author"];
                  item.authorID = [itemDict objectForKey:@"author_id"];
-                 item.description = [itemDict objectForKey:@"description"];
+                 item.html = [itemDict objectForKey:@"description"];
+				 
+				 NSString *author = [itemDict objectForKey:@"author"];
+				 item.author = author;
+				 
+				 // Extract username
+				 NSRange usernameRange = [author rangeOfString:@"\\(([^)]+)\\)" options:NSRegularExpressionSearch];
+				 if (usernameRange.location != NSNotFound) {
+					 // Remove parenthesis
+					 usernameRange.location += 1;
+					 usernameRange.length -= 2;
+					 
+					 item.username = [author substringWithRange:usernameRange];
+				 }
+				 
                  [mutableItems addObject:item];
              }
              
@@ -254,7 +268,7 @@ const NSInteger kTitleLabelTag = 4313;
         titleLabel.textAlignment = NSTextAlignmentCenter;
         titleLabel.tag = kTitleLabelTag;
         [view addSubview:titleLabel];
-        
+		
         cell.contentView = view;
     }
         
@@ -291,20 +305,26 @@ const NSInteger kTitleLabelTag = 4313;
         
         // Calculate final rect
         CGRect fullScreenRect = [self.view convertRect:gridView.frame toView:cell.contentView];
-        
+		
         // Position title label
         UILabel *titleLabel = (UILabel *)[_contentView viewWithTag:kTitleLabelTag];
         titleLabel.frame = CGRectMake((fullScreenRect.size.width - titleLabel.frame.size.width) / 2.0f,
                                       fullScreenRect.size.height,
                                       fullScreenRect.size.width, 0.0f);
-        titleLabel.text = item.title;
-        titleLabel.text = @"a really really really long title that should span multiple line please ok thank you good bye";
+		
+		NSMutableArray *stringComponents = [NSMutableArray new];
+		if (item.title.length > 0) [stringComponents addObject:item.title];
+		if (item.username.length > 0) [stringComponents addObject:item.username];
+
+		titleLabel.text = [stringComponents componentsJoinedByString:@"\n\nby "];
+		
         [titleLabel sizeToFit];
+		
         CGRect titleFrame = CGRectMake(0.0f,
-                                       fullScreenRect.size.height - titleLabel.frame.size.height,
+                                       fullScreenRect.size.height - titleLabel.frame.size.height - 2*kTitleLabelVPadding,
                                        fullScreenRect.size.width,
-                                       titleLabel.frame.size.height);
-        
+                                       titleLabel.frame.size.height + 2*kTitleLabelVPadding);
+		
         [UIView animateWithDuration:0.5
                               delay:0
                             options:0
